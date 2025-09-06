@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	localopt "github.com/yupsh/awk/opt"
 	yup "github.com/yupsh/framework"
 	"github.com/yupsh/framework/opt"
+
+	localopt "github.com/yupsh/awk/opt"
 )
 
 // Flags represents the configuration options for the awk command
