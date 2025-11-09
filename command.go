@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	yup "github.com/gloo-foo/framework"
+	gloo "github.com/gloo-foo/framework"
 )
 
 // Context provides access to awk's execution context for each line
@@ -113,13 +113,13 @@ func (SimpleProgram) End(ctx *Context) (string, error)      { return "", nil }
 
 type command struct {
 	program Program
-	inputs  yup.Inputs[yup.File, flags]
+	inputs  gloo.Inputs[gloo.File, flags]
 }
 
-func Awk(program Program, parameters ...any) yup.Command {
+func Awk(program Program, parameters ...any) gloo.Command {
 	cmd := command{
 		program: program,
-		inputs:  yup.Initialize[yup.File, flags](parameters...),
+		inputs:  gloo.Initialize[gloo.File, flags](parameters...),
 	}
 	if cmd.inputs.Flags.FieldSeparator == "" {
 		cmd.inputs.Flags.FieldSeparator = " "
@@ -130,7 +130,7 @@ func Awk(program Program, parameters ...any) yup.Command {
 	return cmd
 }
 
-func (c command) Executor() yup.CommandExecutor {
+func (c command) Executor() gloo.CommandExecutor {
 	return c.inputs.Wrap(func(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) error {
 		// Initialize context
 		awkCtx := &Context{
@@ -157,20 +157,25 @@ func (c command) Executor() yup.CommandExecutor {
 			awkCtx.NR++
 			line := scanner.Text()
 
-			// Split into fields
-			awkCtx.Fields = make([]string, 0, 16)
-			awkCtx.Fields = append(awkCtx.Fields, line) // $0
+		// Split into fields
+		awkCtx.Fields = make([]string, 0, 16)
+		awkCtx.Fields = append(awkCtx.Fields, line) // $0
 
-			var fields []string
-			if awkCtx.FS == " " {
-				// Default: split on whitespace
-				fields = strings.Fields(line)
+		var fields []string
+		if awkCtx.FS == " " {
+			// Default: split on whitespace
+			fields = strings.Fields(line)
+		} else {
+			// Custom separator
+			if line == "" {
+				// Empty line has no fields, regardless of separator
+				fields = []string{}
 			} else {
-				// Custom separator
 				fields = strings.Split(line, awkCtx.FS)
 			}
-			awkCtx.Fields = append(awkCtx.Fields, fields...)
-			awkCtx.NF = len(fields)
+		}
+		awkCtx.Fields = append(awkCtx.Fields, fields...)
+		awkCtx.NF = len(fields)
 
 			// Check condition
 			if !c.program.Condition(awkCtx) {
